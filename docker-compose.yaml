@@ -1,0 +1,137 @@
+version: "3.8"
+
+services:
+  web_api:
+    container_name: web_api
+    build: .
+    ports:
+      - 8080:8080
+    labels:
+      co.elastic.logs/enabled: true
+      co.elastic.logs/json.keys_under_root: true
+      co.elastic.logs/json.overwrite_keys: true
+      co.elastic.logs/json.add_error_key: true
+      co.elastic.logs/json.expand_keys: true
+    environment:
+      MONGODB_URL: mongodb://root:leomessi@mongodb:27017/book_db?authSource=admin&ssl=false
+      MONGODB_DATABASENAME: book_db
+      JWT_KEY: leomessi
+      REDIS_URL: redis:6379
+      REDIS_PASSWORD: leomessi
+      KAFKA_URL: kafka:9092
+      APP_NAME: user-service
+      APP_ENVIRONMENT: local
+      ELASTIC_APM_SERVER_URL: http://localhost:8200
+      ELASTIC_APM_SERVICE_NAME: user-service
+      LOG_PATH: /usr/share/filebeat/log.json
+    volumes:
+      - ./volumes/filebeat/log.json:/usr/share/filebeat/log.json
+
+  mongodb:
+    container_name: book_mongodb
+    image: mongo
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: leomessi
+    volumes:
+      - ./volumes/mongodb:/data/db
+
+  zookeeper:
+    container_name: book_zookeeper
+    image: bitnami/zookeeper:3.8
+    ports:
+      - 2181:2181
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - zk_id=1
+
+  redis:
+    container_name: book_redis
+    image: redis:6.0.9
+    command: redis-server --requirepass leomessi --appendonly yes
+    ports:
+      - 6379:6379
+    volumes:
+      - ./volumes/redis:/data
+
+  kafka:
+    container_name: book_kafka
+    image: bitnami/kafka:3.2
+    ports:
+      - 9092:9092
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+    volumes: 
+      - ./volumes/kafka:/var/lib/kafka/data
+
+  elasticsearch:
+    container_name: book_elasticsearch
+    labels:
+      co.elastic.logs/enabled: false
+    environment:
+      - discovery.type=single-node
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-f", "http://localhost:9200/_cat/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 80
+    ports:
+      - 9200:9200
+
+  apm_server:
+    container_name: book_apm_server
+    image: docker.elastic.co/apm/apm-server:7.15.0
+    volumes:
+      - ./volumes/apm-server/apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
+    depends_on:
+      - elasticsearch
+      - kibana
+    cap_add: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID"]
+    cap_drop: ["ALL"]
+    ports:
+      - 8200:8200
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=true
+        -E setup.kibana.host=kibana:5601
+        -E setup.template.settings.index.number_of_replicas=0
+        -E apm-server.kibana.enabled=true
+        -E apm-server.kibana.host=kibana:5601
+        -E output.elasticsearch.hosts=["elasticsearch:9200"]
+
+  filebeat:
+    container_name: book_filebeat
+    labels:
+      co.elastic.logs/enabled: false
+    user: root
+    image: docker.elastic.co/beats/filebeat:7.15.0
+    command: filebeat -e -strict.perms=false
+    volumes:
+      - ./volumes/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./volumes/filebeat/log.json:/usr/share/filebeat/log.json
+
+  kibana:
+    container_name: book_kibana
+    labels:
+      co.elastic.logs/enabled: false
+    image: docker.elastic.co/kibana/kibana:7.15.0
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-f", "http://localhost:5601/api/status"]
+      interval: 3s
+      timeout: 3s
+      retries: 80
+    ports:
+      - 5601:5601

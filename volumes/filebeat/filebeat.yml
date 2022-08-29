@@ -1,0 +1,19 @@
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"] 
+
+filebeat.inputs:
+- type: log
+  paths: /usr/share/filebeat/log.json
+  json.keys_under_root: true
+  json.overwrite_keys: true
+  json.add_error_key: true
+  json.expand_keys: true
+
+processors:
+- add_host_metadata: ~
+- add_cloud_metadata: ~
+- add_docker_metadata: ~
+- add_kubernetes_metadata: ~
+
+xpack.monitoring.elasticsearch.username: beats_system
+xpack.monitoring.elasticsearch.password: elastic
