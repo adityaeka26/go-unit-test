@@ -147,12 +147,7 @@ func (service UsecaseImpl) Register(ctx context.Context, request web.RegisterReq
 		return helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	service.logger.GetLogger().Info(
-		"Register success",
-		zap.String("context", context),
-		zap.ByteString("request", marshaledRequest),
-	)
-
+	service.logger.GetLogger().Info("Register success", zap.String("context", context), zap.ByteString("request", marshaledRequest))
 	return nil
 }
 
@@ -161,11 +156,7 @@ func (service UsecaseImpl) VerifyRegister(ctx context.Context, request web.Verif
 
 	marshaledRequest, err := json.Marshal(request)
 	if err != nil {
-		service.logger.GetLogger().Error(
-			"Marshal request fail",
-			zap.String("context", context),
-			zap.Error(err),
-		)
+		service.logger.GetLogger().Error("Marshal request fail", zap.String("context", context), zap.Error(err))
 		return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -176,20 +167,11 @@ func (service UsecaseImpl) VerifyRegister(ctx context.Context, request web.Verif
 		"username": request.Username,
 	})
 	if err != nil {
-		service.logger.GetLogger().Error(
-			"Find one user fail",
-			zap.String("context", context),
-			zap.Error(err),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Error("Find one user fail", zap.String("context", context), zap.Error(err), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
 	if user != nil {
-		service.logger.GetLogger().Warn(
-			"Username already registered",
-			zap.String("context", context),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Warn("Username already registered", zap.String("context", context), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusUnprocessableEntity, "Username already registered")
 	}
 
@@ -197,19 +179,10 @@ func (service UsecaseImpl) VerifyRegister(ctx context.Context, request web.Verif
 	userRedisJson, err := service.redis.Get(ctx, fmt.Sprintf("REGISTER:%s", request.Username)).Result()
 	if err != nil {
 		if err == redis.Nil {
-			service.logger.GetLogger().Warn(
-				"OTP has expired",
-				zap.String("context", context),
-				zap.ByteString("request", marshaledRequest),
-			)
+			service.logger.GetLogger().Warn("OTP has expired", zap.String("context", context), zap.ByteString("request", marshaledRequest))
 			return nil, helper.CustomError(http.StatusUnauthorized, "OTP has expired")
 		}
-		service.logger.GetLogger().Error(
-			"Get redis fail",
-			zap.String("context", context),
-			zap.Error(err),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Error("Get redis fail", zap.String("context", context), zap.Error(err), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -217,22 +190,13 @@ func (service UsecaseImpl) VerifyRegister(ctx context.Context, request web.Verif
 	var userRedis domain.UserRedis
 	err = json.Unmarshal([]byte(userRedisJson), &userRedis)
 	if err != nil {
-		service.logger.GetLogger().Error(
-			"Unmarshal redis fail",
-			zap.String("context", context),
-			zap.Error(err),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Error("Unmarshal redis fail", zap.String("context", context), zap.Error(err), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	// Validate otp
 	if userRedis.Otp != request.Otp {
-		service.logger.GetLogger().Warn(
-			"Invalid OTP",
-			zap.String("context", context),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Warn("Invalid OTP", zap.String("context", context), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusUnauthorized, "Invalid OTP")
 	}
 
@@ -245,24 +209,14 @@ func (service UsecaseImpl) VerifyRegister(ctx context.Context, request web.Verif
 	}
 	insertedId, err := service.repository.InsertOneUser(ctx, insertUser)
 	if err != nil {
-		service.logger.GetLogger().Error(
-			"Insert one user fail",
-			zap.String("context", context),
-			zap.Error(err),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Error("Insert one user fail", zap.String("context", context), zap.Error(err), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	// Delete user in redis
 	err = service.redis.Del(ctx, fmt.Sprintf("REGISTER:%s", request.Username)).Err()
 	if err != nil {
-		service.logger.GetLogger().Error(
-			"Delete redis fail",
-			zap.String("context", context),
-			zap.Error(err),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Error("Delete redis fail", zap.String("context", context), zap.Error(err), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -271,12 +225,7 @@ func (service UsecaseImpl) VerifyRegister(ctx context.Context, request web.Verif
 		Id: *insertedId,
 	})
 	if err != nil {
-		service.logger.GetLogger().Error(
-			"Generate token fail",
-			zap.String("context", context),
-			zap.Error(err),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Error("Generate token fail", zap.String("context", context), zap.Error(err), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
 
@@ -285,20 +234,9 @@ func (service UsecaseImpl) VerifyRegister(ctx context.Context, request web.Verif
 	}
 	marshaledResponse, err := json.Marshal(response)
 	if err != nil {
-		service.logger.GetLogger().Error(
-			"Marshal response fail",
-			zap.String("context", context),
-			zap.Error(err),
-			zap.ByteString("request", marshaledRequest),
-		)
+		service.logger.GetLogger().Error("Marshal response fail", zap.String("context", context), zap.Error(err), zap.ByteString("request", marshaledRequest))
 		return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
 	}
-	service.logger.GetLogger().Info(
-		"Verify register success",
-		zap.String("context", context),
-		zap.ByteString("request", marshaledRequest),
-		zap.ByteString("response", marshaledResponse),
-	)
-
+	service.logger.GetLogger().Info("Verify register success", zap.String("context", context), zap.ByteString("request", marshaledRequest), zap.ByteString("response", marshaledResponse))
 	return &response, nil
 }
