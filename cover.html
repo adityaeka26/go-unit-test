@@ -1,0 +1,644 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>basic: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">go-unit-test/basic/calculator.go (100.0%)</option>
+				
+				<option value="file1">go-unit-test/basic/usecase/usecase.go (85.7%)</option>
+				
+				<option value="file2">go-unit-test/web-api/module/handler/handler.go (50.0%)</option>
+				
+				<option value="file3">go-unit-test/web-api/module/repository/repository.go (80.0%)</option>
+				
+				<option value="file4">go-unit-test/web-api/module/usecase/usecase.go (66.3%)</option>
+				
+				<option value="file5">go-unit-test/web-api/router/router.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package basic
+
+func Sum(a int, b int) int <span class="cov8" title="1">{
+        return a + b
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package usecase
+
+import (
+        "context"
+        "errors"
+
+        "go-unit-test/basic/domain"
+        "go-unit-test/basic/repository"
+
+        "go.mongodb.org/mongo-driver/bson"
+)
+
+type Usecase interface {
+        GetUser(ctx context.Context, id string) (*domain.User, error)
+}
+
+type UsecaseImpl struct {
+        repository repository.Repository
+}
+
+func NewUsecase(repository repository.Repository) Usecase <span class="cov8" title="1">{
+        return &amp;UsecaseImpl{
+                repository: repository,
+        }
+}</span>
+
+func (usecase *UsecaseImpl) GetUser(ctx context.Context, id string) (*domain.User, error) <span class="cov8" title="1">{
+        user, err := usecase.repository.FindOneUser(ctx, bson.M{})
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">if user == nil </span><span class="cov8" title="1">{
+                return nil, errors.New("user not found")
+        }</span>
+
+        <span class="cov8" title="1">return user, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package handler
+
+import (
+        "net/http"
+
+        "go-unit-test/web-api/helper"
+        "go-unit-test/web-api/logger"
+        "go-unit-test/web-api/module/model/web"
+        "go-unit-test/web-api/module/usecase"
+
+        "github.com/gin-gonic/gin"
+        "go.elastic.co/apm"
+        "go.elastic.co/apm/module/apmzap/v2"
+)
+
+type Handler interface {
+        Index(c *gin.Context)
+        Register(c *gin.Context)
+        VerifyRegister(c *gin.Context)
+}
+type HandlerImpl struct {
+        usecase usecase.Usecase
+        logger  logger.Logger
+}
+
+func NewHandler(usecase usecase.Usecase, logger logger.Logger) Handler <span class="cov8" title="1">{
+        return &amp;HandlerImpl{
+                usecase: usecase,
+                logger:  logger,
+        }
+}</span>
+
+func (handler HandlerImpl) Index(c *gin.Context) <span class="cov0" title="0">{
+        span, _ := apm.StartSpan(c.Request.Context(), "Index", "handler")
+        defer span.End()
+
+        traceContextFields := apmzap.TraceContext(c.Request.Context())
+        handler.logger.GetLogger().With(traceContextFields...).Debug("handling request")
+
+        helper.RespSuccess(c, nil, "Index success")
+}</span>
+
+func (handler HandlerImpl) Register(c *gin.Context) <span class="cov8" title="1">{
+        span, ctx := apm.StartSpan(c.Request.Context(), "Register", "handler")
+        defer span.End()
+
+        traceContextFields := apmzap.TraceContext(c.Request.Context())
+        handler.logger.GetLogger().With(traceContextFields...).Debug("handling request")
+
+        request := &amp;web.RegisterRequest{}
+
+        if err := c.ShouldBind(request); err != nil </span><span class="cov0" title="0">{
+                helper.RespError(c, helper.CustomError(http.StatusBadRequest, err.Error()))
+                return
+        }</span>
+        <span class="cov8" title="1">if err := helper.Validate(request); err != nil </span><span class="cov0" title="0">{
+                helper.RespError(c, helper.CustomError(http.StatusBadRequest, err.Error()))
+                return
+        }</span>
+
+        <span class="cov8" title="1">err := handler.usecase.Register(ctx, *request)
+        if err != nil </span><span class="cov0" title="0">{
+                helper.RespError(c, err)
+                return
+        }</span>
+        <span class="cov8" title="1">helper.RespSuccess(c, nil, "Register success")</span>
+}
+
+func (handler HandlerImpl) VerifyRegister(c *gin.Context) <span class="cov8" title="1">{
+        request := &amp;web.VerifyRegisterRequest{}
+
+        if err := c.ShouldBind(request); err != nil </span><span class="cov0" title="0">{
+                helper.RespError(c, helper.CustomError(http.StatusBadRequest, err.Error()))
+                return
+        }</span>
+        <span class="cov8" title="1">if err := helper.Validate(request); err != nil </span><span class="cov0" title="0">{
+                helper.RespError(c, helper.CustomError(http.StatusBadRequest, err.Error()))
+                return
+        }</span>
+
+        <span class="cov8" title="1">response, err := handler.usecase.VerifyRegister(c.Request.Context(), *request)
+        if err != nil </span><span class="cov0" title="0">{
+                helper.RespError(c, err)
+                return
+        }</span>
+        <span class="cov8" title="1">helper.RespSuccess(c, response, "Register success")</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package repository
+
+import (
+        "context"
+
+        "go-unit-test/web-api/database"
+        "go-unit-test/web-api/module/model/domain"
+)
+
+type Repository interface {
+        InsertOneUser(ctx context.Context, document interface{}) (*string, error)
+        FindOneUser(ctx context.Context, filter interface{}) (*domain.User, error)
+}
+type RepositoryImpl struct {
+        mongo database.MongoDatabase
+}
+
+func NewRepository(mongo database.MongoDatabase) Repository <span class="cov8" title="1">{
+        return &amp;RepositoryImpl{
+                mongo: mongo,
+        }
+}</span>
+
+func (repository *RepositoryImpl) InsertOneUser(ctx context.Context, document interface{}) (*string, error) <span class="cov8" title="1">{
+        insertedId, err := repository.mongo.InsertOne(ctx, database.InsertOne{
+                CollectionName: "users",
+                Document:       document,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return insertedId, nil</span>
+}
+
+func (repository *RepositoryImpl) FindOneUser(ctx context.Context, filter interface{}) (*domain.User, error) <span class="cov8" title="1">{
+        var result *domain.User
+        err := repository.mongo.FindOne(ctx, database.FindOne{
+                CollectionName: "users",
+                Filter:         filter,
+                Result:         &amp;result,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return result, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package usecase
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "regexp"
+        "strings"
+        "time"
+
+        "go-unit-test/web-api/database"
+        "go-unit-test/web-api/helper"
+        "go-unit-test/web-api/jwt"
+        "go-unit-test/web-api/kafka"
+        "go-unit-test/web-api/logger"
+        "go-unit-test/web-api/module/model/domain"
+        "go-unit-test/web-api/module/model/web"
+        "go-unit-test/web-api/module/repository"
+
+        "github.com/go-redis/redis/v8"
+        "go.mongodb.org/mongo-driver/bson"
+        "go.uber.org/zap"
+        "golang.org/x/crypto/bcrypt"
+)
+
+type Usecase interface {
+        Register(ctx context.Context, request web.RegisterRequest) error
+        VerifyRegister(ctx context.Context, request web.VerifyRegisterRequest) (*web.VerifyRegisterResponse, error)
+}
+type UsecaseImpl struct {
+        repository    repository.Repository
+        jwtAuth       jwt.JWT
+        redis         database.RedisClient
+        kafkaProducer kafka.KafkaProducer
+        logger        logger.Logger
+}
+
+func NewUsecase(repository repository.Repository, jwtAuth jwt.JWT, redis database.RedisClient, kafkaProducer kafka.KafkaProducer, logger logger.Logger) Usecase <span class="cov8" title="1">{
+        return &amp;UsecaseImpl{
+                repository:    repository,
+                jwtAuth:       jwtAuth,
+                redis:         redis,
+                kafkaProducer: kafkaProducer,
+                logger:        logger,
+        }
+}</span>
+
+func (service UsecaseImpl) Register(ctx context.Context, request web.RegisterRequest) error <span class="cov8" title="1">{
+        context := "service-Register"
+        marshaledRequest, err := json.Marshal(request)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Marshal request fail", zap.Error(err), zap.String("context", context))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Preprocecss username &amp; mobile number
+        <span class="cov8" title="1">request.Username = strings.ToLower(request.Username)
+        mobileNumberRegex := regexp.MustCompile(`^(\+628|628|08|8)`)
+        if !mobileNumberRegex.MatchString(request.MobileNumber) </span><span class="cov8" title="1">{
+                service.logger.GetLogger().Warn("Wrong format mobile number", zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusBadRequest, "Wrong format mobile number")
+        }</span>
+        <span class="cov8" title="1">request.MobileNumber = mobileNumberRegex.ReplaceAllString(request.MobileNumber, "+628")
+
+        // Check username is already registered or not yet
+        user, err := service.repository.FindOneUser(ctx, bson.M{
+                "username": request.Username,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Find one user fail", zap.Error(err), zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+        <span class="cov8" title="1">if user != nil </span><span class="cov8" title="1">{
+                service.logger.GetLogger().Warn("Username already registered", zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusUnprocessableEntity, "Username already registered")
+        }</span>
+
+        // Check username is already registered or not yet
+        <span class="cov8" title="1">user, err = service.repository.FindOneUser(ctx, bson.M{
+                "mobileNumber": request.MobileNumber,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Find one user 2 fail", zap.Error(err), zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+        <span class="cov8" title="1">if user != nil </span><span class="cov8" title="1">{
+                service.logger.GetLogger().Warn("Mobile number already registered", zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusUnprocessableEntity, "Mobile number already registered")
+        }</span>
+
+        // Generate hashed password
+        <span class="cov8" title="1">hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Generate hashed password fail", zap.Error(err), zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Generate otp 6 digit
+        <span class="cov8" title="1">otp, err := helper.GenerateOTP(6)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Generate otp fail", zap.Error(err), zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Generate user json for redis
+        <span class="cov8" title="1">userRedis := domain.UserRedis{
+                Username:     request.Username,
+                Password:     string(hashedPassword),
+                Name:         request.Name,
+                Otp:          *otp,
+                MobileNumber: request.MobileNumber,
+        }
+        userRedisJson, err := json.Marshal(userRedis)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Marshal redis fail", zap.Error(err), zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Insert user json to redis
+        <span class="cov8" title="1">if err = service.redis.Set(
+                ctx,
+                fmt.Sprintf("REGISTER:%s", request.Username),
+                string(userRedisJson),
+                time.Minute*10,
+        ).Err(); err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Set redis fail", zap.Error(err), zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Generate user json for kafka
+        <span class="cov8" title="1">userKafka := domain.RegisterOtpKafka{
+                Name:         request.Name,
+                Otp:          *otp,
+                MobileNumber: request.MobileNumber,
+        }
+        userKafkaJson, err := json.Marshal(userKafka)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Marshal kafka fail", zap.Error(err), zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Produce user json to kafka
+        <span class="cov8" title="1">err = service.kafkaProducer.SendMessage("REGISTER-OTP", string(userKafkaJson))
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error("Send message kafka fail", zap.Error(err), zap.String("context", context), zap.ByteString("request", marshaledRequest))
+                return helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        <span class="cov8" title="1">service.logger.GetLogger().Info(
+                "Register success",
+                zap.String("context", context),
+                zap.ByteString("request", marshaledRequest),
+        )
+
+        return nil</span>
+}
+
+func (service UsecaseImpl) VerifyRegister(ctx context.Context, request web.VerifyRegisterRequest) (*web.VerifyRegisterResponse, error) <span class="cov8" title="1">{
+        context := "service-VerifyRegister"
+
+        marshaledRequest, err := json.Marshal(request)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error(
+                        "Marshal request fail",
+                        zap.String("context", context),
+                        zap.Error(err),
+                )
+                return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        <span class="cov8" title="1">request.Username = strings.ToLower(request.Username)
+
+        // Check username is already registered or not yet
+        user, err := service.repository.FindOneUser(ctx, bson.M{
+                "username": request.Username,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error(
+                        "Find one user fail",
+                        zap.String("context", context),
+                        zap.Error(err),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+        <span class="cov8" title="1">if user != nil </span><span class="cov8" title="1">{
+                service.logger.GetLogger().Warn(
+                        "Username already registered",
+                        zap.String("context", context),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusUnprocessableEntity, "Username already registered")
+        }</span>
+
+        // Get user from redis
+        <span class="cov8" title="1">userRedisJson, err := service.redis.Get(ctx, fmt.Sprintf("REGISTER:%s", request.Username)).Result()
+        if err != nil </span><span class="cov8" title="1">{
+                if err == redis.Nil </span><span class="cov8" title="1">{
+                        service.logger.GetLogger().Warn(
+                                "OTP has expired",
+                                zap.String("context", context),
+                                zap.ByteString("request", marshaledRequest),
+                        )
+                        return nil, helper.CustomError(http.StatusUnauthorized, "OTP has expired")
+                }</span>
+                <span class="cov0" title="0">service.logger.GetLogger().Error(
+                        "Get redis fail",
+                        zap.String("context", context),
+                        zap.Error(err),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")</span>
+        }
+
+        // Parse user json to user object
+        <span class="cov8" title="1">var userRedis domain.UserRedis
+        err = json.Unmarshal([]byte(userRedisJson), &amp;userRedis)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error(
+                        "Unmarshal redis fail",
+                        zap.String("context", context),
+                        zap.Error(err),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Validate otp
+        <span class="cov8" title="1">if userRedis.Otp != request.Otp </span><span class="cov8" title="1">{
+                service.logger.GetLogger().Warn(
+                        "Invalid OTP",
+                        zap.String("context", context),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusUnauthorized, "Invalid OTP")
+        }</span>
+
+        // Insert user to mongodb
+        <span class="cov8" title="1">insertUser := domain.InsertUser{
+                Username:     userRedis.Username,
+                Password:     userRedis.Password,
+                Name:         userRedis.Name,
+                MobileNumber: userRedis.MobileNumber,
+        }
+        insertedId, err := service.repository.InsertOneUser(ctx, insertUser)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error(
+                        "Insert one user fail",
+                        zap.String("context", context),
+                        zap.Error(err),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Delete user in redis
+        <span class="cov8" title="1">err = service.redis.Del(ctx, fmt.Sprintf("REGISTER:%s", request.Username)).Err()
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error(
+                        "Delete redis fail",
+                        zap.String("context", context),
+                        zap.Error(err),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        // Generate token
+        <span class="cov8" title="1">token, err := service.jwtAuth.GenerateToken(jwt.Payload{
+                Id: *insertedId,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error(
+                        "Generate token fail",
+                        zap.String("context", context),
+                        zap.Error(err),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+
+        <span class="cov8" title="1">response := web.VerifyRegisterResponse{
+                Token: *token,
+        }
+        marshaledResponse, err := json.Marshal(response)
+        if err != nil </span><span class="cov0" title="0">{
+                service.logger.GetLogger().Error(
+                        "Marshal response fail",
+                        zap.String("context", context),
+                        zap.Error(err),
+                        zap.ByteString("request", marshaledRequest),
+                )
+                return nil, helper.CustomError(http.StatusInternalServerError, "Internal server error")
+        }</span>
+        <span class="cov8" title="1">service.logger.GetLogger().Info(
+                "Verify register success",
+                zap.String("context", context),
+                zap.ByteString("request", marshaledRequest),
+                zap.ByteString("response", marshaledResponse),
+        )
+
+        return &amp;response, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package router
+
+import (
+        "go-unit-test/web-api/middleware"
+        "go-unit-test/web-api/module/handler"
+
+        "github.com/gin-gonic/gin"
+        "go.elastic.co/apm/module/apmgin"
+)
+
+type Router interface {
+        GetGinEngine() *gin.Engine
+}
+
+type RouterImpl struct {
+        ginEngine *gin.Engine
+        auth      middleware.Auth
+}
+
+func NewRouter(handler handler.Handler, auth middleware.Auth) Router <span class="cov8" title="1">{
+        router := gin.New()
+        router.Use(apmgin.Middleware(router))
+
+        userRouter := router.Group("/user")
+
+        userRouter.Use(apmgin.Middleware(router))
+
+        userRouter.GET("/", handler.Index)
+        userRouter.POST("/v1/register", handler.Register)
+        userRouter.POST("/v1/register/verify", handler.VerifyRegister)
+
+        return &amp;RouterImpl{
+                ginEngine: router,
+        }
+}</span>
+
+func (router RouterImpl) GetGinEngine() *gin.Engine <span class="cov8" title="1">{
+        return router.ginEngine
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
