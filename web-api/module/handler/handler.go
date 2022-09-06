@@ -9,8 +9,6 @@ import (
 	"go-unit-test/web-api/module/usecase"
 
 	"github.com/gin-gonic/gin"
-	"go.elastic.co/apm"
-	"go.elastic.co/apm/module/apmzap/v2"
 )
 
 type Handler interface {
@@ -31,22 +29,10 @@ func NewHandler(usecase usecase.Usecase, logger logger.Logger) Handler {
 }
 
 func (handler HandlerImpl) Index(c *gin.Context) {
-	span, _ := apm.StartSpan(c.Request.Context(), "Index", "handler")
-	defer span.End()
-
-	traceContextFields := apmzap.TraceContext(c.Request.Context())
-	handler.logger.GetLogger().With(traceContextFields...).Debug("handling request")
-
 	helper.RespSuccess(c, nil, "Index success")
 }
 
 func (handler HandlerImpl) Register(c *gin.Context) {
-	span, ctx := apm.StartSpan(c.Request.Context(), "Register", "handler")
-	defer span.End()
-
-	traceContextFields := apmzap.TraceContext(c.Request.Context())
-	handler.logger.GetLogger().With(traceContextFields...).Debug("handling request")
-
 	request := &web.RegisterRequest{}
 
 	if err := c.ShouldBind(request); err != nil {
@@ -58,7 +44,7 @@ func (handler HandlerImpl) Register(c *gin.Context) {
 		return
 	}
 
-	err := handler.usecase.Register(ctx, *request)
+	err := handler.usecase.Register(c.Request.Context(), *request)
 	if err != nil {
 		helper.RespError(c, err)
 		return
